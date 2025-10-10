@@ -15,7 +15,7 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_PASSWORD: postgres:18-alpine
+          POSTGRES_PASSWORD: secret
           POSTGRES_USER : root
           POSTGRES_DB : simple_bank
         options: >-
