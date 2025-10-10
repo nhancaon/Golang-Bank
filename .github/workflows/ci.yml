@@ -7,9 +7,23 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   test:
+    name: Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres:18-alpine
+          POSTGRES_USER : root
+          POSTGRES_DB : simple_bank
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -17,6 +31,9 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.24'
+
+    - name: Run migrations
+      run: make migrateup
 
     - name: Test
       run: make test
