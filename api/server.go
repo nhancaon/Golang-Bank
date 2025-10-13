@@ -8,7 +8,7 @@ import (
 
 type Server struct {
 	router *gin.Engine
-	store  *db.Store
+	store  db.Store
 }
 
 func ErrorResponse(err error) gin.H {
@@ -16,7 +16,7 @@ func ErrorResponse(err error) gin.H {
 }
 
 // NewServer creates a new HTTP server and setup routing
-func NewServer(store *db.Store) *Server {
+func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	r := gin.Default()
 

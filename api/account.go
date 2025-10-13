@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	db "simple-bank/db/sqlc"
 
@@ -47,7 +48,11 @@ func (server *Server) getAccount(ctx *gin.Context) {
 
 	account, err := server.store.GetAccount(ctx, req.ID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, ErrorResponse(err))
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, ErrorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, ErrorResponse(err))
 		return
 	}
 
