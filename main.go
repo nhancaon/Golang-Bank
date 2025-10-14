@@ -5,7 +5,7 @@ import (
 	"log"
 	"simple-bank/api"
 	db "simple-bank/db/sqlc"
-	"simple-bank/db/util"
+	"simple-bank/util"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
