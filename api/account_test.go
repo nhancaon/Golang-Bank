@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	mockdb "simple-bank/db/mock"
 	db "simple-bank/db/sqlc"
-	"simple-bank/db/util"
+	"simple-bank/util"
 	"testing"
 
 	"github.com/golang/mock/gomock"

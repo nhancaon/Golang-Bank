@@ -2,10 +2,12 @@ package api
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	db "simple-bank/db/sqlc"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type createAccountRequest struct {
@@ -28,6 +30,14 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	account, err := server.store.CreateAccount(ctx, arg)
 	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			log.Println(pgErr.Code)
+			switch pgErr.Code {
+			case "23503", "23505": // foreign_key_violation, unique_violation
+				ctx.JSON(http.StatusForbidden, errorResponse(pgErr))
+				return
+			}
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
