@@ -20,6 +20,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func randomUser(t *testing.T) (user db.User, password string) {
+	password = util.RandomString(6)
+	hashedPassword, err := util.HashPassword(password)
+	require.NoError(t, err)
+
+	user = db.User{
+		Username:       util.RandomOwner(),
+		HashedPassword: hashedPassword,
+		FullName:       util.RandomOwner(),
+		Email:          util.RandomEmail(),
+	}
+	return
+}
+
 type eqCreateUserParamsMatcher struct {
 	arg      db.CreateUserParams
 	password string
@@ -46,15 +60,6 @@ func EqCreateUserParams(arg db.CreateUserParams, password string) gomock.Matcher
 	return eqCreateUserParamsMatcher{arg, password}
 }
 
-func RandomUser(t *testing.T) (db.User, string) {
-	user := db.User{
-		Username: util.RandomOwner(),
-		FullName: util.RandomOwner(),
-		Email:    util.RandomEmail(),
-	}
-	return user, util.RandomString(6)
-}
-
 func requireBodyMatchUser(t *testing.T, body *bytes.Buffer, user db.User) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
@@ -69,7 +74,7 @@ func requireBodyMatchUser(t *testing.T, body *bytes.Buffer, user db.User) {
 }
 
 func TestCreateUserAPI(t *testing.T) {
-	user, password := RandomUser(t)
+	user, password := randomUser(t)
 
 	testCases := []struct {
 		name          string
@@ -225,7 +230,7 @@ func TestCreateUserAPI(t *testing.T) {
 			store := mockdb.NewMockStore(ctrl)
 			tc.buildStubs(store)
 
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			// Marshal body data to JSON
