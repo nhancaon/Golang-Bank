@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    name: Build image
+    name: Build image and push to ECR
     runs-on: ubuntu-latest
 
     permissions:
