@@ -1,0 +1,26 @@
+Bị lỗi chưa tạo tag cho subnet thì chạy
+
+CLUSTER_NAME="simple-bank"
+REGION="us-east-1"
+aws ec2 create-tags \
+  --resources subnet-064bd148747a89089 subnet-01f25700a9bab88eb subnet-011104e566d0a1910 subnet-0d297556c0c96e65c subnet-05e4f76f74995be35 \
+  --tags \
+    Key=kubernetes.io/role/elb,Value=1 \
+    Key=kubernetes.io/role/internal-elb,Value=1 \
+    Key=kubernetes.io/cluster/$CLUSTER_NAME,Value=shared \
+  --region $REGION
+
+khi có address ingress
+nếu curl timeout có thể là do ELB của bạn là internal nên không thể access từ internet. Bây giờ cần recreate thành internet-facing.
+
+# Check scheme - PHẢI LÀ internet-facing
+aws elbv2 describe-load-balancers \
+  --region us-east-1 \
+  --query "LoadBalancers[?DNSName=='$NEW_ELB'].{DNS:DNSName,Scheme:Scheme,Type:Type}"
+
+nếu chưa thì thêm annotation đúng cho AWS Load Balancer Controller
+kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{"metadata":{"annotations":{"service.beta.kubernetes.io/aws-load-balancer-scheme":"internet-facing"}}}'
+
+hoặc thêm tay
+
+"service.beta.kubernetes.io/aws-load-balancer-scheme": "internet-facing",

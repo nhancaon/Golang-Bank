@@ -1,0 +1,15 @@
+Sau khi tạo thành công EKS trên aws (cluster tên simple-bank)
+
+tải kubectl trên local (xong rồi thì check phiên bản)
+vi ~/.aws/credentials
+----------------------------------------
+[default]
+aws_access_key_id = 
+aws_secret_access_key = 
+
+[github]
+aws_access_key_id = 
+aws_secret_access_key = 
+-----------------------------------------
+export AWS_PROFILE=default
+aws eks update-kubeconfig --name simple-bank --region us-east-1

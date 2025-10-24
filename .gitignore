@@ -1,25 +1,81 @@
-# Binaries
+# Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, build output
-*.test
-*.out
-
-# Go build cache & modules
 bin/
-vendor/
-*.log
+dist/
 
-# IDE/editor settings
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+*.coverprofile
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+app.env
+
+# Kubernetes secrets
+secret.yaml
+secrets.yaml
+*secret*.yaml
+*-secret.yaml
+
+# Kubernetes sensitive configs
+kustomization.yaml.secret
+sealed-secret.yaml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+
+# IDE
 .vscode/
 .idea/
 *.swp
+*.swo
 *~
-
-# OS files
 .DS_Store
-Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# AWS credentials
+.aws/
+credentials
+
+# Docker
+.dockerignore
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Keys and certificates
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
