@@ -5,7 +5,7 @@ metadata:
   namespace: kube-system 
 data: 
   mapUsers: | 
-    - userarn: arn:aws:iam::637423512359:role/GitHubAction-AssumeRoleWithAction
-      username: github-ci
+    - userarn: arn:aws:iam::637423512359:user/user_pull_image
+      username: user_pull_image
       groups:
         - system:masters
