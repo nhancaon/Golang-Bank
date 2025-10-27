@@ -1,15 +1,15 @@
 package api
 
 import (
-	"database/sql"
-	"log"
+	"errors"
 	"net/http"
-	db "simple-bank/db/sqlc"
 	"simple-bank/util"
 	"time"
 
+	db "simple-bank/db/sqlc"
+
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/google/uuid"
 )
 
 type createUserRequest struct {
@@ -19,7 +19,7 @@ type createUserRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 }
 
-type UserResponse struct {
+type userResponse struct {
 	Username          string    `json:"username"`
 	FullName          string    `json:"full_name"`
 	Email             string    `json:"email"`
@@ -27,23 +27,13 @@ type UserResponse struct {
 	CreatedAt         time.Time `json:"created_at"`
 }
 
-func NewUserResponse(user db.User) UserResponse {
-	return UserResponse{
-		Username: user.Username,
-		FullName: user.FullName,
-		Email:    user.Email,
-		PasswordChangedAt: func() time.Time {
-			if user.PasswordChangedAt.Valid {
-				return user.PasswordChangedAt.Time
-			}
-			return time.Time{} // hoặc time.Now() nếu muốn
-		}(),
-		CreatedAt: func() time.Time {
-			if user.CreatedAt.Valid {
-				return user.CreatedAt.Time
-			}
-			return time.Time{}
-		}(),
+func newUserResponse(user db.User) userResponse {
+	return userResponse{
+		Username:          user.Username,
+		FullName:          user.FullName,
+		Email:             user.Email,
+		PasswordChangedAt: user.PasswordChangedAt,
+		CreatedAt:         user.CreatedAt,
 	}
 }
 
@@ -69,20 +59,15 @@ func (server *Server) createUser(ctx *gin.Context) {
 
 	user, err := server.store.CreateUser(ctx, arg)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok {
-			log.Println(pgErr.Code)
-			switch pgErr.Code {
-			case "23505": // unique_violation
-				ctx.JSON(http.StatusForbidden, errorResponse(pgErr))
-				return
-			}
+		if db.ErrorCode(err) == db.UniqueViolation {
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	rsp := NewUserResponse(user)
-
+	rsp := newUserResponse(user)
 	ctx.JSON(http.StatusOK, rsp)
 }
 
@@ -92,8 +77,12 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string       `json:"access_token"`
-	User        UserResponse `json:"user"`
+	SessionID             uuid.UUID    `json:"session_id"`
+	AccessToken           string       `json:"access_token"`
+	AccessTokenExpiresAt  time.Time    `json:"access_token_expires_at"`
+	RefreshToken          string       `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time    `json:"refresh_token_expires_at"`
+	User                  userResponse `json:"user"`
 }
 
 func (server *Server) loginUser(ctx *gin.Context) {
@@ -105,7 +94,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 
 	user, err := server.store.GetUser(ctx, req.Username)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -119,16 +108,45 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 
-	accessToken, err := server.tokenMaker.CreateToken(user.Username, server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
+		user.Username,
+		server.config.AccessTokenDuration,
+	)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
+		user.Username,
+		server.config.RefreshTokenDuration,
+	)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	session, err := server.store.CreateSession(ctx, db.CreateSessionParams{
+		ID:           refreshPayload.ID,
+		Username:     user.Username,
+		RefreshToken: refreshToken,
+		UserAgent:    ctx.Request.UserAgent(),
+		ClientIp:     ctx.ClientIP(),
+		IsBlocked:    false,
+		ExpiresAt:    refreshPayload.ExpiredAt,
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
 	rsp := loginUserResponse{
-		AccessToken: accessToken,
-		User:        NewUserResponse(user),
+		SessionID:             session.ID,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessPayload.ExpiredAt,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
+		User:                  newUserResponse(user),
 	}
-
 	ctx.JSON(http.StatusOK, rsp)
 }
