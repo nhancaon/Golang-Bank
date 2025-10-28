@@ -1,0 +1,17 @@
+----------grpc evan cli-------------------
+# Tải bản mới nhất
+EVANS_VERSION="0.10.11"
+wget https://github.com/ktr0731/evans/releases/download/v${EVANS_VERSION}/evans_linux_amd64.tar.gz
+
+# Giải nén
+tar -xzf evans_linux_amd64.tar.gz
+
+# Di chuyển vào PATH
+sudo mv evans /usr/local/bin/
+
+# Xóa file tải về
+rm evans_linux_amd64.tar.gz
+
+# Verify
+evans --version
+
