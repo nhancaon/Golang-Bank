@@ -37,3 +37,5 @@ proto:
 
 sau đó gõ make proto trong terminal
 -------------------------------------------------
+
+folder options của protoc-gen-openapiv2/options copy từ grpc gateway trên github qua
