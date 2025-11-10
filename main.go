@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"embed"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -17,6 +19,9 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 )
+
+//go:embed doc/swagger/*
+var swaggerDocs embed.FS
 
 func main() {
 	var err error
@@ -85,8 +90,12 @@ func runGatewayServer(config util.Config, store db.Store) {
 	mux := http.NewServeMux()
 	mux.Handle("/", grpcMux)
 
-	fs := http.FileServer(http.Dir("./doc/swagger/"))
-	mux.Handle("/swagger/", http.StripPrefix("/swagger/", fs))
+	// Serve embedded swagger files
+	swaggerFS, err := fs.Sub(swaggerDocs, "doc/swagger")
+	if err != nil {
+		log.Fatal("cannot create swagger sub filesystem:", err)
+	}
+	mux.Handle("/swagger/", http.StripPrefix("/swagger/", http.FileServer(http.FS(swaggerFS))))
 
 	listener, err := net.Listen("tcp", config.HTTPServerAddress)
 	if err != nil {
