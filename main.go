@@ -13,6 +13,9 @@ import (
 	"simple-bank/pb"
 	"simple-bank/util"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
@@ -36,11 +39,26 @@ func main() {
 		log.Fatal("cannot connect to db:", err)
 	}
 
+	runMigration(config.MigrationURL, config.DBSource)
+
 	store := db.NewStore(conn)
 	go runGatewayServer(config, store)
 	runGrpcServer(config, store)
-
 }
+
+func runMigration(migrationSource string, dbSource string) {
+	migration, err := migrate.New(migrationSource, dbSource)
+	if err != nil {
+		log.Fatal("cannot create migrate instance:", err)
+	}
+
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatal("failed to run migrate up:", err)
+	}
+
+	log.Println("db migrated successfully")
+}
+
 func runGrpcServer(config util.Config, store db.Store) {
 	server, err := gapi.NewServer(config, store)
 	if err != nil {
